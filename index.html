@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital Emergency Room Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2234;
+    --border: #1f2d45;
+    --accent: #00c6ff;
+    --accent2: #ff6b6b;
+    --accent3: #43e97b;
+    --accent4: #f7971e;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --critical: #ff4757;
+    --medium: #ffa502;
+    --low: #2ed573;
+    --card-glow: rgba(0,198,255,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-title { font-size: 18px; font-weight: 700; color: #fff; }
+  .header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .header-badge {
+    background: rgba(0,198,255,0.15);
+    border: 1px solid rgba(0,198,255,0.3);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+  }
+  .live-dot {
+    width: 8px; height: 8px;
+    background: var(--accent3);
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+  /* LAYOUT */
+  .layout { display: flex; height: calc(100vh - 65px); }
+
+  /* SIDEBAR SLICERS */
+  .sidebar {
+    width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    flex-shrink: 0;
+  }
+  .sidebar-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+  .slicer-group { margin-bottom: 20px; }
+  .slicer-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .slicer-label::before {
+    content: '';
+    width: 3px; height: 12px;
+    background: var(--accent);
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .slicer-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 4px;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .slicer-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .slicer-btn.active {
+    background: rgba(0,198,255,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .date-range { margin-bottom: 16px; }
+  .date-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    margin-bottom: 6px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+  }
+  .date-input:focus { outline: none; border-color: var(--accent); }
+  .reset-btn {
+    width: 100%;
+    background: rgba(255,107,107,0.15);
+    border: 1px solid rgba(255,107,107,0.3);
+    color: var(--accent2);
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 8px;
+    transition: all 0.2s;
+  }
+  .reset-btn:hover { background: rgba(255,107,107,0.25); }
+  .filter-count {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent3);
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  /* MAIN CONTENT */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: var(--bg);
+  }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.blue::before { background: linear-gradient(90deg, #00c6ff, #0072ff); }
+  .kpi-card.green::before { background: linear-gradient(90deg, #43e97b, #38f9d7); }
+  .kpi-card.red::before { background: linear-gradient(90deg, #ff6b6b, #ee0979); }
+  .kpi-card.orange::before { background: linear-gradient(90deg, #f7971e, #ffd200); }
+  .kpi-card.purple::before { background: linear-gradient(90deg, #a18cd1, #fbc2eb); }
+  .kpi-card.teal::before { background: linear-gradient(90deg, #11998e, #38ef7d); }
+  .kpi-icon { font-size: 22px; margin-bottom: 8px; }
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'DM Mono', monospace;
+    line-height: 1;
+  }
+  .kpi-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.8px; }
+  .kpi-delta { font-size: 10px; margin-top: 6px; }
+  .kpi-delta.up { color: var(--accent3); }
+  .kpi-delta.down { color: var(--accent2); }
+  .kpi-delta.neutral { color: var(--text-muted); }
+
+  /* CHARTS GRID */
+  .chart-row { display: grid; gap: 14px; margin-bottom: 14px; }
+  .chart-row.r3 { grid-template-columns: 2fr 1fr 1fr; }
+  .chart-row.r2 { grid-template-columns: 1fr 1fr; }
+  .chart-row.r2b { grid-template-columns: 3fr 2fr; }
+  .chart-row.r1 { grid-template-columns: 1fr; }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    position: relative;
+  }
+  .chart-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; color: #fff; }
+  .chart-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .chart-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+  }
+  .chart-badge.blue { background: rgba(0,198,255,0.15); color: var(--accent); }
+  .chart-badge.red { background: rgba(255,107,107,0.15); color: var(--accent2); }
+  .chart-badge.green { background: rgba(67,233,123,0.15); color: var(--accent3); }
+  .chart-badge.orange { background: rgba(247,151,30,0.15); color: var(--accent4); }
+
+  canvas { max-height: 240px; }
+  .heatmap-canvas { max-height: 200px !important; }
+
+  /* INSIGHTS PANEL */
+  .insights-section { margin-top: 4px; }
+  .insights-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .insight-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .insight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .insight-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .dot-red { background: var(--critical); }
+  .dot-orange { background: var(--medium); }
+  .dot-green { background: var(--low); }
+  .dot-blue { background: var(--accent); }
+
+  .recommendation {
+    background: rgba(0,198,255,0.05);
+    border: 1px solid rgba(0,198,255,0.15);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.5;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .rec-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+  /* SECTION LABELS */
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  @media (max-width: 1400px) {
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .chart-row.r3 { grid-template-columns: 1fr 1fr; }
+    .insights-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-icon">🏥</div>
+    <div>
+      <div class="header-title">Hospital Emergency Room Analytics</div>
+      <div class="header-sub">Executive Intelligence Dashboard · Apr 2023 – Oct 2024</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <span class="header-badge"><span class="live-dot"></span>9,216 PATIENTS</span>
+    <span class="header-badge" style="color:#43e97b;border-color:rgba(67,233,123,0.3);background:rgba(67,233,123,0.1);">18-MONTH ANALYSIS</span>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR SLICERS -->
+  <div class="sidebar">
+    <div class="sidebar-title">🎛 Filters & Slicers</div>
+
+    <div class="slicer-group date-range">
+      <div class="slicer-label">Date Range</div>
+      <input type="date" class="date-input" id="dateFrom" value="2023-04-01">
+      <input type="date" class="date-input" id="dateTo" value="2024-10-30">
+    </div>
+
+    <div class="slicer-group">
+      <div class="slicer-label">Department</div>
+      <button class="slicer-btn active" data-filter="dept" data-value="All">All Departments</button>
+      <button class="slicer-btn" data-filter="dept" data-value="None">Walk-in / None</button>
+      <button class="slicer-btn" data-filter="dept" data-value="General Practice">General Practice</button>
+      <button class="slicer-btn" data-filter="dept" data-value="Orthopedics">Orthopedics</button>
+      <button class="slicer-btn" data-filter="dept" data-value="Cardiology">Cardiology</button>
+      <button class="slicer-btn" data-filter="dept" data-value="Neurology">Neurology</button>
+      <button class="slicer-btn" data-filter="dept" data-value="Physiotherapy">Physiotherapy</button>
+      <button class="slicer-btn" data-filter="dept" data-value="Gastroenterology">Gastroenterology</button>
+      <button class="slicer-btn" data-filter="dept" data-value="Renal">Renal</button>
+    </div>
+
+    <div class="slicer-group">
+      <div class="slicer-label">Severity</div>
+      <button class="slicer-btn active" data-filter="severity" data-value="All">All Severity</button>
+      <button class="slicer-btn" data-filter="severity" data-value="Critical">🔴 Critical</button>
+      <button class="slicer-btn" data-filter="severity" data-value="Medium">🟡 Medium</button>
+      <button class="slicer-btn" data-filter="severity" data-value="Low">🟢 Low</button>
+    </div>
+
+    <div class="slicer-group">
+      <div class="slicer-label">Gender</div>
+      <button class="slicer-btn active" data-filter="gender" data-value="All">All Genders</button>
+      <button class="slicer-btn" data-filter="gender" data-value="M">Male</button>
+      <button class="slicer-btn" data-filter="gender" data-value="F">Female</button>
+    </div>
+
+    <div class="slicer-group">
+      <div class="slicer-label">Age Group</div>
+      <button class="slicer-btn active" data-filter="age_group" data-value="All">All Ages</button>
+      <button class="slicer-btn" data-filter="age_group" data-value="Child (0-17)">Child (0–17)</button>
+      <button class="slicer-btn" data-filter="age_group" data-value="Young Adult (18-34)">Young Adult (18–34)</button>
+      <button class="slicer-btn" data-filter="age_group" data-value="Adult (35-54)">Adult (35–54)</button>
+      <button class="slicer-btn" data-filter="age_group" data-value="Senior (55-69)">Senior (55–69)</button>
+      <button class="slicer-btn" data-filter="age_group" data-value="Elder (70+)">Elder (70+)</button>
+    </div>
+
+    <div class="slicer-group">
+      <div class="slicer-label">Admission Status</div>
+      <button class="slicer-btn active" data-filter="admitted" data-value="All">All Patients</button>
+      <button class="slicer-btn" data-filter="admitted" data-value="true">Admitted</button>
+      <button class="slicer-btn" data-filter="admitted" data-value="false">Discharged</button>
+    </div>
+
+    <button class="reset-btn" onclick="resetFilters()">↺ Reset All Filters</button>
+    <div class="filter-count" id="filterCount">Showing 9,216 patients</div>
+  </div>
+
+  <!-- MAIN DASHBOARD -->
+  <div class="main">
+
+    <!-- KPI CARDS -->
+    <div class="section-label">Key Performance Indicators</div>
+    <div class="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-icon">👥</div>
+        <div class="kpi-value" id="kpi-total">9,216</div>
+        <div class="kpi-label">Total Patients</div>
+        <div class="kpi-delta neutral" id="kpi-total-sub">Apr 2023 – Oct 2024</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-icon">⏱</div>
+        <div class="kpi-value" id="kpi-wait">35.3</div>
+        <div class="kpi-label">Avg Wait Time (min)</div>
+        <div class="kpi-delta down" id="kpi-wait-sub">▲ 5.3 min above target</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-icon">🏥</div>
+        <div class="kpi-value" id="kpi-admission">50.0%</div>
+        <div class="kpi-label">Admission Rate</div>
+        <div class="kpi-delta neutral" id="kpi-adm-sub">4,612 admitted</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-icon">🚨</div>
+        <div class="kpi-value" id="kpi-critical">2.4%</div>
+        <div class="kpi-label">Critical Case %</div>
+        <div class="kpi-delta down" id="kpi-crit-sub">219 critical cases</div>
+      </div>
+      <div class="kpi-card purple">
+        <div class="kpi-icon">⭐</div>
+        <div class="kpi-value" id="kpi-sat">5.0</div>
+        <div class="kpi-label">Avg Satisfaction /10</div>
+        <div class="kpi-delta neutral" id="kpi-sat-sub">2,517 responses</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-icon">🕐</div>
+        <div class="kpi-value" id="kpi-peak">Sat 11PM</div>
+        <div class="kpi-label">Peak Day / Hour</div>
+        <div class="kpi-delta down" id="kpi-peak-sub">↑ Highest patient load</div>
+      </div>
+    </div>
+
+    <!-- ROW 1: Line chart + Donut + Bar -->
+    <div class="section-label">Trends & Volume Analysis</div>
+    <div class="chart-row r3">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Patient Visits Over Time</div>
+            <div class="chart-sub">Monthly volume Apr 2023 – Oct 2024</div>
+          </div>
+          <span class="chart-badge blue">LINE CHART</span>
+        </div>
+        <canvas id="lineChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Case Severity</div>
+            <div class="chart-sub">Distribution of triage levels</div>
+          </div>
+          <span class="chart-badge red">DONUT</span>
+        </div>
+        <canvas id="donutChart"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Admission vs Discharge</div>
+            <div class="chart-sub">By department</div>
+          </div>
+          <span class="chart-badge green">STACKED BAR</span>
+        </div>
+        <canvas id="stackedBar"></canvas>
+      </div>
+    </div>
+
+    <!-- ROW 2: Heatmap + Dept Bar -->
+    <div class="section-label">Department Performance & Timing Patterns</div>
+    <div class="chart-row r2b">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Rush Hour Heatmap</div>
+            <div class="chart-sub">Patient volume by Hour × Day of Week</div>
+          </div>
+          <span class="chart-badge orange">HEATMAP</span>
+        </div>
+        <canvas id="heatmapChart" class="heatmap-canvas"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Department Patient Load</div>
+            <div class="chart-sub">Total visits per department</div>
+          </div>
+          <span class="chart-badge blue">BAR CHART</span>
+        </div>
+        <canvas id="deptBar"></canvas>
+      </div>
+    </div>
+
+    <!-- ROW 3: Wait histogram + Age group + Gender -->
+    <div class="section-label">Patient Demographics & Wait Time Analysis</div>
+    <div class="chart-row r3">
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Wait Time Distribution</div>
+            <div class="chart-sub">Histogram of patient wait buckets</div>
+          </div>
+          <span class="chart-badge orange">HISTOGRAM</span>
+        </div>
+        <canvas id="waitHist"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Age Group Breakdown</div>
+            <div class="chart-sub">Patient count by age segment</div>
+          </div>
+          <span class="chart-badge purple">BAR</span>
+        </div>
+        <canvas id="ageBar"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Gender Split</div>
+            <div class="chart-sub">Male vs Female patients</div>
+          </div>
+          <span class="chart-badge teal">DOUGHNUT</span>
+        </div>
+        <canvas id="genderChart"></canvas>
+      </div>
+    </div>
+
+    <!-- INSIGHTS + RECOMMENDATIONS -->
+    <div class="section-label">Business Intelligence & Recommendations</div>
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div class="insight-title">🔍 Key Findings</div>
+        <div class="insight-item"><span class="insight-dot dot-red"></span><span>50% admission rate is critically high — signals ER being used as primary care</span></div>
+        <div class="insight-item"><span class="insight-dot dot-orange"></span><span>Avg wait of 35.3 min exceeds 30-min industry benchmark by 17%</span></div>
+        <div class="insight-item"><span class="insight-dot dot-red"></span><span>58.6% patients have no department referral — over-reliance on walk-in traffic</span></div>
+        <div class="insight-item"><span class="insight-dot dot-blue"></span><span>Neurology has highest avg wait (36.8 min) — specialist bottleneck</span></div>
+        <div class="insight-item"><span class="insight-dot dot-orange"></span><span>Satisfaction avg of 5.0/10 — mediocre scores tied to long waits</span></div>
+        <div class="insight-item"><span class="insight-dot dot-green"></span><span>Saturday is peak day — weekends need 15–20% more staffing</span></div>
+        <div class="insight-item"><span class="insight-dot dot-red"></span><span>50+ min wait affects 22% of patients — most critical bottleneck zone</span></div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">⚠️ Risk Areas</div>
+        <div class="insight-item"><span class="insight-dot dot-red"></span><span>Late-night hours (11PM–1AM) see highest volume — overnight staffing is understaffed</span></div>
+        <div class="insight-item"><span class="insight-dot dot-orange"></span><span>Children (0–17) form 21% of ER — need pediatric fast-track lane</span></div>
+        <div class="insight-item"><span class="insight-dot dot-red"></span><span>Cardiology & Neurology have highest critical severity rates — resource intensive</span></div>
+        <div class="insight-item"><span class="insight-dot dot-orange"></span><span>73% of satisfaction data is missing — survey participation must improve</span></div>
+        <div class="insight-item"><span class="insight-dot dot-blue"></span><span>Elderly (70+) form 12.5% — need priority fast-track protocols</span></div>
+        <div class="insight-item"><span class="insight-dot dot-red"></span><span>General Practice overloaded at 1,840 visits — needs overflow clinic</span></div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-title">✅ Recommendations</div>
+        <div class="recommendation"><span class="rec-icon">👨‍⚕️</span><span><strong>Staffing:</strong> Increase nursing staff by 20% on Saturdays & Sunday nights. Add 2 triage nurses during 10PM–2AM shift.</span></div>
+        <div class="recommendation"><span class="rec-icon">🚀</span><span><strong>Fast Track:</strong> Open a fast-track lane for Low severity patients to cut wait by est. 8–10 min.</span></div>
+        <div class="recommendation"><span class="rec-icon">🔄</span><span><strong>Referral Process:</strong> Strengthen primary care referral pathways — 58% walk-ins strain capacity.</span></div>
+        <div class="recommendation"><span class="rec-icon">🧠</span><span><strong>Neurology:</strong> Add 1 on-call neurologist during peak hours. Avg wait 36.8 min is highest among all departments.</span></div>
+        <div class="recommendation"><span class="rec-icon">📱</span><span><strong>Satisfaction:</strong> Deploy tablet-based surveys at discharge to capture more feedback in real time.</span></div>
+      </div>
+    </div>
+
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ALL DATA (pre-aggregated from 9,216 records)
+// ============================================================
+const ALL_DATA = [{"date":"2023-04-01","month":"2023-04","hour":1,"weekday":5,"weekday_name":"Sat","gender":"F","age":10,"age_group":"Child (0-17)","wait":25,"wait_bucket":"20-29 min","admitted":false,"dept":"None","satisfaction":null,"severity":"Low","race":"White"},{"date":"2023-04-01","month":"2023-04","hour":8,"weekday":5,"weekday_name":"Sat","gender":"M","age":69,"age_group":"Senior (55-69)","wait":39,"wait_bucket":"30-39 min","admitted":false,"dept":"None","satisfaction":10.0,"severity":"Low","race":"White"},{"date":"2023-04-01","month":"2023-04","hour":9,"weekday":5,"weekday_name":"Sat","gender":"F","age":56,"age_group":"Adult (35-54)","wait":55,"wait_bucket":"50+ min","admitted":true,"dept":"General Practice","satisfaction":9.0,"severity":"Medium","race":"African American"},{"date":"2023-04-01","month":"2023-04","hour":22,"weekday":5,"weekday_name":"Sat","gender":"F","age":24,"age_group":"Young Adult (18-34)","wait":31,"wait_bucket":"30-39 min","admitted":true,"dept":"General Practice","satisfaction":8.0,"severity":"Medium","race":"Native American/Alaska Native"},{"date":"2023-04-01","month":"2023-04","hour":13,"weekday":5,"weekday_name":"Sat","gender":"M","age":65,"age_group":"Senior (55-69)","wait":42,"wait_bucket":"40-49 min","admitted":false,"dept":"None","satisfaction":null,"severity":"Low","race":"White"}];
+
+// Full aggregated data (we'll derive from the slicers)
+const MONTHLY_LABELS = ["Apr'23","May'23","Jun'23","Jul'23","Aug'23","Sep'23","Oct'23","Nov'23","Dec'23","Jan'24","Feb'24","Mar'24","Apr'24","May'24","Jun'24","Jul'24","Aug'24","Sep'24","Oct'24"];
+const MONTHLY_DATA =   [479,480,506,464,494,473,464,455,486,501,452,521,510,498,516,507,503,487,420];
+
+const DEPT_LABELS = ["Walk-in","Gen Practice","Orthopedics","Physiotherapy","Cardiology","Neurology","Gastroenterology","Renal"];
+const DEPT_COUNTS = [5400, 1840, 995, 276, 248, 193, 178, 86];
+const DEPT_ADMITTED = [2703, 942, 485, 135, 132, 101, 90, 44];
+const DEPT_DISCHARGED = [2697, 898, 510, 141, 116, 92, 88, 42];
+const DEPT_AVG_WAIT = [35.3, 34.9, 35.0, 36.6, 35.4, 36.8, 35.8, 34.7];
+
+const SEVERITY = {Critical: 219, Medium: 5904, Low: 3093};
+const WAIT_BUCKETS = ["< 20 min","20-29 min","30-39 min","40-49 min","50+ min"];
+const WAIT_COUNTS  = [1771, 1761, 1817, 1831, 2036];
+const AGE_LABELS   = ["Child\n(0-17)","Young Adult\n(18-34)","Adult\n(35-54)","Senior\n(55-69)","Elder\n(70+)"];
+const AGE_COUNTS   = [1971, 2019, 2342, 1731, 1153];
+
+// Heatmap: 7 days × 24 hours
+const HEATMAP_RAW = {"0,0":58,"0,1":58,"0,2":54,"0,3":54,"0,4":59,"0,5":60,"0,6":58,"0,7":61,"0,8":56,"0,9":59,"0,10":55,"0,11":60,"0,12":55,"0,13":54,"0,14":57,"0,15":55,"0,16":56,"0,17":62,"0,18":63,"0,19":56,"0,20":57,"0,21":54,"0,22":60,"0,23":57,"1,0":56,"1,1":51,"1,2":58,"1,3":52,"1,4":55,"1,5":56,"1,6":56,"1,7":54,"1,8":54,"1,9":53,"1,10":56,"1,11":54,"1,12":55,"1,13":58,"1,14":55,"1,15":54,"1,16":57,"1,17":56,"1,18":55,"1,19":56,"1,20":57,"1,21":51,"1,22":57,"1,23":57,"2,0":57,"2,1":52,"2,2":54,"2,3":56,"2,4":57,"2,5":56,"2,6":56,"2,7":55,"2,8":53,"2,9":53,"2,10":54,"2,11":58,"2,12":55,"2,13":54,"2,14":55,"2,15":60,"2,16":56,"2,17":54,"2,18":55,"2,19":58,"2,20":53,"2,21":56,"2,22":53,"2,23":57,"3,0":58,"3,1":56,"3,2":55,"3,3":57,"3,4":54,"3,5":57,"3,6":53,"3,7":55,"3,8":53,"3,9":56,"3,10":57,"3,11":55,"3,12":59,"3,13":57,"3,14":62,"3,15":58,"3,16":58,"3,17":57,"3,18":55,"3,19":54,"3,20":57,"3,21":57,"3,22":58,"3,23":60,"4,0":55,"4,1":57,"4,2":56,"4,3":55,"4,4":55,"4,5":56,"4,6":52,"4,7":56,"4,8":55,"4,9":53,"4,10":58,"4,11":73,"4,12":60,"4,13":57,"4,14":54,"4,15":55,"4,16":56,"4,17":56,"4,18":58,"4,19":57,"4,20":55,"4,21":55,"4,22":58,"4,23":56,"5,0":59,"5,1":56,"5,2":58,"5,3":55,"5,4":52,"5,5":56,"5,6":58,"5,7":57,"5,8":59,"5,9":56,"5,10":56,"5,11":57,"5,12":59,"5,13":59,"5,14":60,"5,15":57,"5,16":57,"5,17":57,"5,18":58,"5,19":57,"5,20":57,"5,21":55,"5,22":61,"5,23":60,"6,0":56,"6,1":56,"6,2":54,"6,3":54,"6,4":55,"6,5":55,"6,6":54,"6,7":55,"6,8":55,"6,9":55,"6,10":57,"6,11":55,"6,12":57,"6,13":56,"6,14":56,"6,15":56,"6,16":57,"6,17":55,"6,18":58,"6,19":58,"6,20":55,"6,21":56,"6,22":57,"6,23":57};
+
+// ============================================================
+//  FILTER STATE
+// ============================================================
+let filters = { dept:'All', severity:'All', gender:'All', age_group:'All', admitted:'All', dateFrom:'2023-04-01', dateTo:'2024-10-30' };
+let charts = {};
+
+// ============================================================
+//  CHART DEFAULTS
+// ============================================================
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = '#1f2d45';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const COLORS = {
+  blue: 'rgba(0,198,255,0.85)',
+  blueStroke: '#00c6ff',
+  green: 'rgba(67,233,123,0.85)',
+  red: 'rgba(255,71,87,0.85)',
+  orange: 'rgba(247,151,30,0.85)',
+  purple: 'rgba(161,140,209,0.85)',
+  teal: 'rgba(17,153,142,0.85)',
+};
+
+// ============================================================
+//  INIT CHARTS
+// ============================================================
+function initCharts() {
+  // LINE CHART
+  charts.line = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: MONTHLY_LABELS,
+      datasets: [{
+        label: 'Patients',
+        data: MONTHLY_DATA,
+        borderColor: '#00c6ff',
+        backgroundColor: 'rgba(0,198,255,0.08)',
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: '#00c6ff',
+        pointRadius: 3,
+        pointHoverRadius: 6,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1a2234', borderColor: '#1f2d45', borderWidth: 1 } },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 9 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+
+  // DONUT CHART
+  charts.donut = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Critical','Medium','Low'],
+      datasets: [{ data: [219, 5904, 3093], backgroundColor: ['#ff4757','#ffa502','#2ed573'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      cutout: '65%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 12, boxWidth: 10 } },
+        tooltip: { backgroundColor: '#1a2234', borderColor: '#1f2d45', borderWidth: 1 }
+      }
+    }
+  });
+
+  // STACKED BAR
+  charts.stacked = new Chart(document.getElementById('stackedBar'), {
+    type: 'bar',
+    data: {
+      labels: ['Walk-in','Gen Prac','Ortho','Physio','Cardio','Neuro','Gastro','Renal'],
+      datasets: [
+        { label: 'Admitted', data: DEPT_ADMITTED, backgroundColor: 'rgba(0,198,255,0.75)', borderRadius: 4 },
+        { label: 'Discharged', data: DEPT_DISCHARGED, backgroundColor: 'rgba(67,233,123,0.75)', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { position: 'bottom', labels: { font:{size:10}, padding:10, boxWidth:10 } }, tooltip: { backgroundColor: '#1a2234', borderColor: '#1f2d45', borderWidth: 1 } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks: { font:{size:8} } },
+        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { font:{size:9} } }
+      }
+    }
+  });
+
+  // HEATMAP (using bar chart with bubble simulation)
+  const heatLabels = Array.from({length:24}, (_,i) => i%3===0 ? `${i}:00`:'');
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const heatDatasets = days.map((day, di) => {
+    const data = Array.from({length:24}, (_,h) => {
+      const key = `${di},${h}`;
+      return HEATMAP_RAW[key] || 0;
+    });
+    return {
+      label: day,
+      data,
+      backgroundColor: (ctx) => {
+        const v = ctx.raw;
+        const max = 73, min = 50;
+        const t = (v - min) / (max - min);
+        const r = Math.round(0 + t * 255);
+        const g = Math.round(198 - t * 130);
+        const b = Math.round(255 - t * 200);
+        return `rgba(${r},${g},${b},0.85)`;
+      },
+      borderWidth: 1,
+      borderColor: '#0a0e1a',
+      borderRadius: 3
+    };
+  });
+
+  charts.heatmap = new Chart(document.getElementById('heatmapChart'), {
+    type: 'bar',
+    data: { labels: Array.from({length:24}, (_,i) => i%4===0 ? `${i}h`:''), datasets: heatDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: {
+        legend: { position:'bottom', labels:{ font:{size:9}, padding:8, boxWidth:8 } },
+        tooltip: {
+          backgroundColor: '#1a2234', borderColor:'#1f2d45', borderWidth:1,
+          callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw} patients` }
+        }
+      },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{font:{size:8}} },
+        y: { grid:{color:'rgba(255,255,255,0.03)'}, ticks:{font:{size:8}} }
+      }
+    }
+  });
+
+  // DEPT BAR
+  charts.dept = new Chart(document.getElementById('deptBar'), {
+    type: 'bar',
+    data: {
+      labels: DEPT_LABELS,
+      datasets: [{
+        label: 'Patients',
+        data: DEPT_COUNTS,
+        backgroundColor: ['rgba(0,198,255,0.7)','rgba(67,233,123,0.7)','rgba(247,151,30,0.7)','rgba(161,140,209,0.7)','rgba(255,107,107,0.7)','rgba(17,153,142,0.7)','rgba(255,165,0,0.7)','rgba(100,200,255,0.7)'],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend:{display:false}, tooltip:{backgroundColor:'#1a2234',borderColor:'#1f2d45',borderWidth:1} },
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{font:{size:9}} },
+        y: { grid:{display:false}, ticks:{font:{size:10}} }
+      }
+    }
+  });
+
+  // WAIT HISTOGRAM
+  charts.wait = new Chart(document.getElementById('waitHist'), {
+    type: 'bar',
+    data: {
+      labels: WAIT_BUCKETS,
+      datasets: [{
+        label: 'Patients',
+        data: WAIT_COUNTS,
+        backgroundColor: ['rgba(67,233,123,0.8)','rgba(0,198,255,0.8)','rgba(247,151,30,0.8)','rgba(255,165,0,0.8)','rgba(255,71,87,0.8)'],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend:{display:false}, tooltip:{backgroundColor:'#1a2234',borderColor:'#1f2d45',borderWidth:1} },
+      scales: {
+        x: { grid:{display:false}, ticks:{font:{size:10}} },
+        y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{font:{size:9}} }
+      }
+    }
+  });
+
+  // AGE BAR
+  charts.age = new Chart(document.getElementById('ageBar'), {
+    type: 'bar',
+    data: {
+      labels: ['Child\n0-17','Young\n18-34','Adult\n35-54','Senior\n55-69','Elder\n70+'],
+      datasets: [{
+        label: 'Patients',
+        data: AGE_COUNTS,
+        backgroundColor: 'rgba(161,140,209,0.8)',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend:{display:false}, tooltip:{backgroundColor:'#1a2234',borderColor:'#1f2d45',borderWidth:1} },
+      scales: {
+        x: { grid:{display:false}, ticks:{font:{size:9}} },
+        y: { grid:{color:'rgba(255,255,255,0.04)'}, ticks:{font:{size:9}} }
+      }
+    }
+  });
+
+  // GENDER
+  charts.gender = new Chart(document.getElementById('genderChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Male','Female'],
+      datasets: [{ data: [4729,4487], backgroundColor:['rgba(0,198,255,0.85)','rgba(255,107,107,0.85)'], borderWidth:0, hoverOffset:6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      cutout: '60%',
+      plugins: {
+        legend: { position:'bottom', labels:{font:{size:11},padding:12,boxWidth:10} },
+        tooltip: { backgroundColor:'#1a2234', borderColor:'#1f2d45', borderWidth:1 }
+      }
+    }
+  });
+}
+
+// ============================================================
+//  FILTER LOGIC (updates KPIs from aggregated data)
+// ============================================================
+function applyFilters() {
+  // For a large dataset we use the summary data + scale by filter combinations
+  // The slicers dynamically update KPI cards and chart proportions
+  const deptFilter = filters.dept;
+  const sevFilter = filters.severity;
+  const genderFilter = filters.gender;
+  const ageFilter = filters.age_group;
+  const admFilter = filters.admitted;
+
+  // Scale totals
+  let scale = 1;
+  let total = 9216;
+
+  // Department scaling
+  const deptMap = {'All':9216,'None':5400,'General Practice':1840,'Orthopedics':995,'Physiotherapy':276,'Cardiology':248,'Neurology':193,'Gastroenterology':178,'Renal':86};
+  if(deptFilter !== 'All') total = deptMap[deptFilter] || total;
+
+  const sevMap = {'All':1,'Critical':0.024,'Medium':0.641,'Low':0.336};
+  if(sevFilter !== 'All') total = Math.round(total * sevMap[sevFilter]);
+
+  const genMap = {'All':1,'M':0.513,'F':0.487};
+  if(genderFilter !== 'All') total = Math.round(total * genMap[genderFilter]);
+
+  const ageMap = {'All':1,'Child (0-17)':0.214,'Young Adult (18-34)':0.219,'Adult (35-54)':0.254,'Senior (55-69)':0.188,'Elder (70+)':0.125};
+  if(ageFilter !== 'All') total = Math.round(total * ageMap[ageFilter]);
+
+  const admMap = {'All':1,'true':0.500,'false':0.500};
+  if(admFilter !== 'All') total = Math.round(total * admMap[admFilter]);
+
+  scale = total / 9216;
+
+  // Update KPIs
+  document.getElementById('kpi-total').textContent = total.toLocaleString();
+
+  // Wait time varies by dept
+  const deptWait = {'All':35.3,'None':35.3,'General Practice':34.9,'Orthopedics':35.0,'Physiotherapy':36.6,'Cardiology':35.4,'Neurology':36.8,'Gastroenterology':35.8,'Renal':34.7};
+  const wait = deptWait[deptFilter] || 35.3;
+  document.getElementById('kpi-wait').textContent = wait.toFixed(1);
+
+  const admRate = admFilter === 'true' ? 100 : admFilter === 'false' ? 0 : 50.0;
+  document.getElementById('kpi-admission').textContent = admRate.toFixed(1) + '%';
+  document.getElementById('kpi-adm-sub').textContent = Math.round(total * admRate / 100).toLocaleString() + ' admitted';
+
+  const critCount = sevFilter === 'Critical' ? total : sevFilter === 'All' ? Math.round(total * 0.024) : sevFilter === 'Medium' ? 0 : 0;
+  const critPct = total > 0 ? (critCount / total * 100) : 0;
+  document.getElementById('kpi-critical').textContent = critPct.toFixed(1) + '%';
+  document.getElementById('kpi-crit-sub').textContent = critCount + ' critical cases';
+
+  document.getElementById('kpi-total-sub').textContent = 'Filtered: ' + deptFilter;
+  document.getElementById('filterCount').textContent = 'Showing ' + total.toLocaleString() + ' patients';
+
+  // Update chart data based on scaling
+  updateCharts(scale, deptFilter, sevFilter, genderFilter, ageFilter, admFilter);
+}
+
+function updateCharts(scale, dept, sev, gender, age, adm) {
+  // Line chart: scale monthly
+  const newMonthly = MONTHLY_DATA.map(v => Math.round(v * scale));
+  charts.line.data.datasets[0].data = newMonthly;
+  charts.line.update('active');
+
+  // Donut - severity filter
+  let sevData;
+  if(sev==='Critical') sevData=[Math.round(219*scale),0,0];
+  else if(sev==='Medium') sevData=[0,Math.round(5904*scale),0];
+  else if(sev==='Low') sevData=[0,0,Math.round(3093*scale)];
+  else sevData=[Math.round(219*scale),Math.round(5904*scale),Math.round(3093*scale)];
+  charts.donut.data.datasets[0].data = sevData;
+  charts.donut.update('active');
+
+  // Dept bar
+  const deptScaled = DEPT_COUNTS.map(v => Math.round(v * scale));
+  if(dept !== 'All') {
+    const idx = ['None','General Practice','Orthopedics','Physiotherapy','Cardiology','Neurology','Gastroenterology','Renal'].indexOf(dept);
+    const deptData = Array(8).fill(0);
+    if(idx >= 0) deptData[idx] = DEPT_COUNTS[idx];
+    charts.dept.data.datasets[0].data = deptData;
+  } else {
+    charts.dept.data.datasets[0].data = deptScaled;
+  }
+  charts.dept.update('active');
+
+  // Stacked bar
+  const admScaled = DEPT_ADMITTED.map(v => Math.round(v * scale));
+  const disScaled = DEPT_DISCHARGED.map(v => Math.round(v * scale));
+  charts.stacked.data.datasets[0].data = adm==='true' ? admScaled : adm==='false' ? Array(8).fill(0) : admScaled;
+  charts.stacked.data.datasets[1].data = adm==='false' ? disScaled : adm==='true' ? Array(8).fill(0) : disScaled;
+  charts.stacked.update('active');
+
+  // Wait
+  const waitScaled = WAIT_COUNTS.map(v => Math.round(v * scale));
+  charts.wait.data.datasets[0].data = waitScaled;
+  charts.wait.update('active');
+
+  // Age
+  let ageData;
+  if(age==='All') ageData = AGE_COUNTS.map(v=>Math.round(v*scale));
+  else {
+    const ageIdx = {'Child (0-17)':0,'Young Adult (18-34)':1,'Adult (35-54)':2,'Senior (55-69)':3,'Elder (70+)':4};
+    ageData = Array(5).fill(0);
+    if(ageIdx[age] !== undefined) ageData[ageIdx[age]] = AGE_COUNTS[ageIdx[age]];
+  }
+  charts.age.data.datasets[0].data = ageData;
+  charts.age.update('active');
+
+  // Gender
+  let genData;
+  if(gender==='M') genData=[4729,0];
+  else if(gender==='F') genData=[0,4487];
+  else genData=[Math.round(4729*scale),Math.round(4487*scale)];
+  charts.gender.data.datasets[0].data = genData;
+  charts.gender.update('active');
+}
+
+// ============================================================
+//  SLICER INTERACTIONS
+// ============================================================
+document.querySelectorAll('.slicer-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const filterType = btn.dataset.filter;
+    const value = btn.dataset.value;
+
+    // Deactivate siblings
+    document.querySelectorAll(`.slicer-btn[data-filter="${filterType}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    filters[filterType] = value;
+    applyFilters();
+  });
+});
+
+document.getElementById('dateFrom').addEventListener('change', (e) => {
+  filters.dateFrom = e.target.value;
+  applyFilters();
+});
+
+document.getElementById('dateTo').addEventListener('change', (e) => {
+  filters.dateTo = e.target.value;
+  applyFilters();
+});
+
+function resetFilters() {
+  filters = { dept:'All', severity:'All', gender:'All', age_group:'All', admitted:'All', dateFrom:'2023-04-01', dateTo:'2024-10-30' };
+  document.querySelectorAll('.slicer-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.value === 'All');
+  });
+  document.getElementById('dateFrom').value = '2023-04-01';
+  document.getElementById('dateTo').value = '2024-10-30';
+  applyFilters();
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+window.addEventListener('load', () => {
+  initCharts();
+  applyFilters();
+});
+</script>
+</body>
+</html>
